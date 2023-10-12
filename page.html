@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill of Quantities</title>
+
+    <style>
+        .BOQ{
+            display: block;
+ 
+ 
+            text-align: center;
+        }
+        .centered-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+  
+        }
+        button {
+            display: block;
+            height: 35px;
+            width: 100px;
+            margin: 0px auto 0px auto;
+            border: solid 0px ;
+            border-radius: 10px;
+            background-color: blueviolet;
+            font-weight: bold;
+        }
+        table, th, td{
+            border-collapse: collapse;
+            border: solid 2px black;
+        }
+    </style>
+</head>
+<body style="margin: 0px;">
+    <h1 style="padding: 150px;px 0 150px 0;background-color: blueviolet;text-align: center;margin: 0px;">Bill of Quantities</h1><br>
+    
+    <br><div class="BOQ">
+        <form  id="boqForm">
+        <label for="item">Item Description:</label>
+        <input type="text" id="item" required><br>
+
+        <br><label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" required><br>
+
+        <br><label for="unitPrice">Unit Price:</label>
+        <input type="number" id="unitPrice" required><br><br>
+
+        <button type="button" onclick="addItem()">Add Item</button>
+    </form><br>
+    <div class="centered-container">
+        <br>
+    <table >
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody id="boqItems">
+        </tbody>
+    </table>
+    </divdiv>
+    <br><br><button onclick="exportToExcel()">Export to Excel</button>
+</div>
+    
+    <script>
+
+
+        async function addItem() {
+            const item = document.getElementById("item").value;
+            const quantity = parseFloat(document.getElementById("quantity").value);
+            const unitPrice = parseFloat(document.getElementById("unitPrice").value);
+
+            if (!item || isNaN(quantity) || isNaN(unitPrice)) {
+                alert("All fields are required, and Quantity and Unit Price must be numbers.");
+                return;
+            }
+
+            const totalAmount = quantity * unitPrice;
+
+            // Send the item to the server for storage
+            const response = await fetch('/addItem', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ item, quantity, unitPrice }),
+            });
+
+            if (response.ok) {
+                document.getElementById("item").value = "";
+                document.getElementById("quantity").value = "";
+                document.getElementById("unitPrice").value = "";
+                displayItems(); // Refresh the displayed items
+            } else {
+                console.error('Failed to add item:', response.statusText);
+            }
+        }
+
+        async function displayItems() {
+            const response = await fetch('/getItems');
+
+            if (response.ok) {
+                const items = await response.json();
+                const boqItems = document.getElementById("boqItems");
+                boqItems.innerHTML = "";
+
+                items.forEach(item => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${item.item}</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.unitPrice}</td>
+                        <td>${item.totalAmount}</td>
+                    `;
+                    boqItems.appendChild(row);
+                });
+            } else {
+                console.error('Failed to retrieve items:', response.statusText);
+            }
+        }
+
+        async function exportToExcel() {
+            // Send a request to the server to generate and download the Excel file
+            const response = await fetch('/exportToExcel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'BOQ.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                console.error('Export to Excel failed:', response.statusText);
+            }
+        }
+
+
+    </script>
+</body>
+</html>
+
+
+
+
+
+
